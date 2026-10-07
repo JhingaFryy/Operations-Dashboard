@@ -1,0 +1,80 @@
+# Operations Dashboard - production reverse proxy.
+#
+#   Browser -> Nginx (:8090) -> static SPA from frontend/dist
+#                            -> /api/* proxied to 127.0.0.1:8321
+#
+# WHY A SEPARATE PORT
+# BL-DCMS already owns port 80 as `default_server` with `server_name _`, so it answers every host
+# that reaches this box. Adding a name-based server block for OD would only work once real DNS
+# (or a hosts entry) pointed a distinct name here, and would silently fall through to BL-DCMS
+# until then. A distinct port is unambiguous today and changes nothing about BL-DCMS. Moving to a
+# hostname (operations.<domain>) on :443 is the right long-term shape - see the phase report.
+#
+# The backend stays bound to 127.0.0.1:8321 and is never exposed directly; Nginx is the only way
+# in. Same-origin by construction: the SPA calls relative /api/... paths, so no CORS is needed and
+# none is configured.
+
+server {
+    listen 8090;
+    listen [::]:8090;
+    server_name _;
+
+    root /opt/operations-dashboard/frontend/dist;
+    index index.html;
+
+    # Uploads are small JSON payloads only; keep the ceiling tight.
+    client_max_body_size 2m;
+
+    # Same security headers BL-DCMS applies. No CSP is set here because the existing BL-DCMS
+    # config does not set one either - introducing one blind would risk breaking the SPA; it is
+    # called out in the report as a follow-up rather than guessed at.
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
+
+    # MSW's service worker ships from frontend/public/ and is therefore always copied into dist by
+    # Vite. Nothing in the production bundle registers it, so it is inert - but a mock-API service
+    # worker has no business being reachable in production at all. Denied rather than deleted, so
+    # the file stays available to the test setup that owns it.
+    location = /mockServiceWorker.js {
+        return 404;
+    }
+
+    # Hashed build assets are immutable.
+    location /assets/ {
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # The SPA shell must never be cached, or a deploy leaves browsers on the old bundle.
+    location = /index.html {
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Cache-Control "no-store" always;
+    }
+
+    # Everything the browser calls at runtime. The backend owns authorization; this block only
+    # transports. Note there is no /docs, /redoc or /openapi.json location: OD's API docs stay
+    # reachable only on 127.0.0.1:8321 for local troubleshooting, never through Nginx.
+    location /api/ {
+        proxy_pass http://127.0.0.1:8321;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+        proxy_connect_timeout 10s;
+        # Authenticated, dynamic data - never cached.
+        add_header Cache-Control "no-store" always;
+    }
+
+    # SPA fallback: client-side routes (/shed-movement, /section-dashboard, ...) are served the
+    # shell. Listed last so it can never shadow /api/ above.
+    location / {
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Cache-Control "no-store" always;
+        try_files $uri $uri/ /index.html;
+    }
+}

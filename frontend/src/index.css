@@ -1,0 +1,4609 @@
+/* Font faces are self-hosted and registered from main.tsx (see the
+   @fontsource-variable imports there) rather than with a CSS @import here —
+   this build's CSS pipeline does not resolve bare npm specifiers inside a
+   CSS @import, but a plain JS import of the same package CSS is bundled
+   normally. Either way, no runtime dependency on Google Fonts or any other
+   third party remains: see the comment in main.tsx for the full rationale. */
+
+/* =========================================================================
+   Operations Dashboard — design system
+   -------------------------------------------------------------------------
+   Modern railway operations control: a deep-navy shell with layered slate
+   surfaces, soft blue-gray borders and restrained cyan/blue accents. Cards
+   separate through surface level, a soft border and a soft shadow — not
+   glowing outlines. A very faint static technical grid keeps the product's
+   operational identity without competing with the data.
+
+   One spacing scale, one type scale, one radius scale and ONE status
+   vocabulary (see src/lib/status.ts, which owns the labels and glyphs; this
+   file owns only their colours). Status is never colour-only: every status
+   badge renders a glyph and a text label as well, and every tone keeps a
+   distinct hue *and* lightness against the navy surfaces.
+
+   Motion is short and purposeful: hover elevation, skeleton shimmer, inline
+   busy spinners. Nothing in the background moves. See the
+   `prefers-reduced-motion` blocks, which remove every non-essential
+   animation/transition (shimmer falls back to static placeholders).
+   ========================================================================= */
+
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  /* --- surfaces & text -------------------------------------------------
+     Layered navy: page (darkest) → sidebar → surface → raised → hover.
+     --color-surface keeps a trace of translucency so the faint grid is felt
+     rather than seen; --color-surface-solid is fully opaque for dropdown
+     result lists, modals and the login card. */
+  --color-bg: #081426;
+  --color-surface: rgba(16, 31, 51, 0.94);
+  --color-surface-solid: #10203a;
+  --color-surface-raised: #152a45;
+  --color-surface-hover: #1a3150;
+  --color-surface-sunken: #0c1a2e;
+  --color-border: rgba(118, 158, 206, 0.16);
+  --color-border-strong: rgba(128, 170, 218, 0.3);
+  --color-border-hover: rgba(150, 190, 235, 0.42);
+  --color-focus-ring: rgba(46, 192, 239, 0.16);
+  --color-link-hover: #7fd8f7;
+  --color-header-bg: rgba(10, 22, 40, 0.82);
+  --color-card-inset: rgba(21, 42, 69, 0.45);
+  --color-text: #e8f0fa;
+  --color-text-muted: #9fb3c9;
+  --color-text-faint: #7d92ab;
+
+  /* --- brand ------------------------------------------------------------
+     Blue carries filled primary actions (white text stays AA on it); cyan is
+     the accent — indicators, focus, links, active navigation. Violet is kept
+     for rare high-attention moments under its historical variable name. */
+  --color-primary: #2f7dff;
+  --color-primary-dark: #2466c7;
+  --color-primary-soft: rgba(47, 125, 255, 0.16);
+  --color-focus: #67e8f9;
+  --color-cyan: #22d3ee;
+  --color-magenta: #9d6bff;
+
+  --color-danger: #f47c90;
+  --color-danger-bg: rgba(244, 124, 144, 0.12);
+  --color-danger-border: rgba(244, 124, 144, 0.38);
+  --color-success: #3ccf95;
+  --color-success-bg: rgba(60, 207, 149, 0.12);
+  --color-success-border: rgba(60, 207, 149, 0.36);
+  --color-warn: #f5b454;
+  --color-warn-bg: rgba(245, 180, 84, 0.12);
+  --color-warn-border: rgba(245, 180, 84, 0.38);
+  --color-active: #45bdf2;
+  --color-active-bg: rgba(69, 189, 242, 0.12);
+  --color-active-border: rgba(69, 189, 242, 0.38);
+  --color-info: #93a2fb;
+  --color-info-bg: rgba(147, 162, 251, 0.12);
+  --color-info-border: rgba(147, 162, 251, 0.36);
+  --color-neutral: #a7b5c9;
+  --color-neutral-bg: rgba(167, 181, 201, 0.1);
+  --color-neutral-border: rgba(167, 181, 201, 0.28);
+
+  --color-sidebar-bg: #0b1829;
+  --color-sidebar-text: #b9c8da;
+  --color-sidebar-muted: #6f86a2;
+  --color-sidebar-active-bg: rgba(46, 192, 239, 0.12);
+  /* The sidebar is the one surface that stays deep navy in BOTH themes, so
+     anything drawn ON it needs its own tokens: --color-text and
+     --color-border flip with the theme and would be near-invisible against
+     navy in light mode. These are deliberately declared once, in the base
+     block only, so the light block inherits them unchanged. */
+  --color-sidebar-text-strong: #e8f0fa;
+  --color-sidebar-border: rgba(118, 158, 206, 0.16);
+  --color-sidebar-accent: #22d3ee;
+
+  /* --- depth ------------------------------------------------------------
+     Soft dark shadows plus a hairline top highlight; no coloured glow. */
+  --glow-primary: inset 0 1px 0 rgba(255, 255, 255, 0.025), 0 8px 24px rgba(2, 8, 20, 0.28);
+  --glow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 14px 32px rgba(2, 8, 20, 0.36);
+
+  /* --- semantic aliases (preferred names for new rules) ---------------- */
+  --bg-page: var(--color-bg);
+  --bg-sidebar: var(--color-sidebar-bg);
+  --surface-1: var(--color-surface);
+  --surface-2: var(--color-surface-raised);
+  --surface-hover: var(--color-surface-hover);
+  --border-subtle: var(--color-border);
+  --text-primary: var(--color-text);
+  --text-secondary: var(--color-text-muted);
+  --accent-primary: var(--color-primary);
+  --accent-secondary: var(--color-cyan);
+  --success: var(--color-success);
+  --warning: var(--color-warn);
+  --danger: var(--color-danger);
+
+  /* --- spacing scale (4px base) --------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  /* --- layout --------------------------------------------------------- */
+  /* Desktop-first. The shell reserves 240px for the sidebar, so at a
+     1580px viewport the content column gets the remaining ~1340px in full
+     (≈1276px usable inside the gutters) instead of being capped early and
+     leaving a dead right margin. The cap only engages above ~1840px. */
+  --content-max: 1600px;
+  --content-gutter: clamp(1rem, 2vw, 2rem);
+
+  /* --- type scale ----------------------------------------------------- */
+  /* Baseline raised for real-browser legibility: operational body/table
+     text is 15px, metadata 14px, small labels 13px. --text-micro (12px) is
+     the exception, for uppercase eyebrow labels only. */
+  --text-micro: 0.75rem; /* 12px — uppercase eyebrows only */
+  --text-xs: 0.8125rem; /* 13px — small labels, table headers */
+  --text-sm: 0.875rem; /* 14px — metadata, secondary text */
+  --text-base: 0.9375rem; /* 15px — body, table cells, buttons */
+  --text-md: 1.0625rem; /* 17px — section titles */
+  --text-lg: 1.3125rem; /* 21px — panel/group headings */
+  --text-xl: 1.75rem; /* 28px — page title */
+  --text-loco: 1.1875rem; /* 19px — loco number in lists/rows */
+  --text-loco-lg: 1.375rem; /* 22px — loco number leading a visit row */
+  --text-loco-xl: 2.125rem; /* 34px — loco number in page context header */
+
+  /* --- radius scale: soft industrial, not bubbly ----------------------- */
+  --radius-lg: 20px; /* large panels, login card, modals */
+  --radius: 16px; /* cards, panels, list containers */
+  --radius-md: 12px; /* nested rows, inputs, state blocks */
+  --radius-sm: 10px; /* buttons, sidebar items, tags */
+  --radius-xs: 6px; /* focus rings, tiny inline marks */
+  --radius-pill: 999px; /* status/phase pills only */
+  --shadow-card: var(--glow-primary);
+
+  /* --- motion ---------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --duration-fast: 140ms;
+  --duration-base: 200ms;
+
+  font-family: 'Manrope Variable', 'Manrope', 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+/* A viewer who has explicitly opted for light mode gets a bright, still
+   legible variant of the same family rather than the stock light palette. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --color-bg: #eef3f9;
+  --color-surface: rgba(255, 255, 255, 0.94);
+  --color-surface-solid: #ffffff;
+  --color-surface-raised: #f5f8fc;
+  --color-surface-hover: #eaf1f9;
+  --color-surface-sunken: #f2f6fb;
+  --color-border: rgba(40, 80, 130, 0.14);
+  --color-border-strong: rgba(40, 80, 130, 0.28);
+  --color-border-hover: rgba(40, 80, 130, 0.38);
+  --color-focus-ring: rgba(14, 116, 144, 0.18);
+  --color-link-hover: #0b5c72;
+  --color-header-bg: rgba(255, 255, 255, 0.86);
+  --color-card-inset: rgba(230, 238, 247, 0.75);
+  --color-text: #0f2338;
+  --color-text-muted: #3f5770;
+  --color-text-faint: #5d738c;
+  --glow-primary: 0 1px 2px rgba(15, 35, 56, 0.08), 0 10px 26px -14px rgba(15, 35, 56, 0.25);
+  --glow-hover: 0 1px 2px rgba(15, 35, 56, 0.1), 0 16px 34px -14px rgba(15, 35, 56, 0.32);
+
+  /* Accents and status, retuned for light surfaces.
+     The dark theme's values are chosen to glow against navy; the same hexes on
+     white are too pale to read, and status must keep its meaning in both
+     themes. Each one keeps its HUE (so blue stays blue, "ready" stays green)
+     and drops in lightness until it carries text on white. Backgrounds and
+     borders are the same colour at low alpha, exactly as in dark mode, so the
+     badge shapes are identical and only the palette moves. */
+  --color-primary: #1f63d6;
+  --color-primary-dark: #17509f;
+  --color-primary-soft: rgba(31, 99, 214, 0.12);
+  --color-focus: #0e7490;
+  --color-cyan: #0e7490;
+  --color-magenta: #6d3fd6;
+
+  --color-danger: #c62b45;
+  --color-danger-bg: rgba(198, 43, 69, 0.1);
+  --color-danger-border: rgba(198, 43, 69, 0.32);
+  --color-success: #0f7a52;
+  --color-success-bg: rgba(15, 122, 82, 0.1);
+  --color-success-border: rgba(15, 122, 82, 0.3);
+  --color-warn: #9a6100;
+  --color-warn-bg: rgba(154, 97, 0, 0.1);
+  --color-warn-border: rgba(154, 97, 0, 0.3);
+  --color-active: #0b6c94;
+  --color-active-bg: rgba(11, 108, 148, 0.1);
+  --color-active-border: rgba(11, 108, 148, 0.3);
+  --color-info: #4b4fd6;
+  --color-info-bg: rgba(75, 79, 214, 0.1);
+  --color-info-border: rgba(75, 79, 214, 0.28);
+  --color-neutral: #53637c;
+  --color-neutral-bg: rgba(83, 99, 124, 0.09);
+  --color-neutral-border: rgba(83, 99, 124, 0.24);
+
+  /* No --color-sidebar-* override here, deliberately. The BL-DCMS Dashboard's
+     drawer is theme-INDEPENDENT: Dashboard/src/components/AppLayout.tsx paints
+     drawerContent with a fixed `background: gradients.navy` and `color:
+     '#E7EDFB'`, and nothing inside it reads theme.palette.mode - so BL-DCMS
+     shows the same deep navy rail in light mode as in dark. Matching that means
+     declaring the sidebar tokens exactly once, in the base block above, and
+     letting light inherit them unchanged. A light-mode-only sidebar palette
+     here would be a third style that neither product has. */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* ================================================================ backdrop ===
+   Two fixed, static layers behind everything (z-index -2), so every real
+   surface paints above them. Nothing here animates: an operations screen is
+   watched for hours, and background motion competes with the data.
+
+   ::before — a soft navy wash: two broad, low-opacity blue radials over the
+   page colour, giving depth without a coloured cast.
+   ::after  — a very faint technical grid (≈3% line opacity), faded toward
+   the edges with a mask so it reads as texture, not as a pattern. */
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 100vh;
+  position: relative;
+}
+
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+}
+
+body::before {
+  background:
+    radial-gradient(ellipse 70% 55% at 12% 0%, rgba(47, 124, 232, 0.14), transparent 70%),
+    radial-gradient(ellipse 60% 50% at 100% 100%, rgba(46, 192, 239, 0.07), transparent 70%),
+    linear-gradient(180deg, #0a1830 0%, var(--color-bg) 45%);
+}
+
+body::after {
+  background:
+    repeating-linear-gradient(90deg, rgba(140, 180, 230, 0.03) 0 1px, transparent 1px 72px),
+    repeating-linear-gradient(0deg, rgba(140, 180, 230, 0.03) 0 1px, transparent 1px 72px);
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 85%);
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 30%, #000 30%, transparent 85%);
+}
+
+:root[data-theme='light'] body::before {
+  background: var(--color-bg);
+}
+
+:root[data-theme='light'] body::after {
+  opacity: 0.5;
+}
+
+h1 {
+  font-size: var(--text-xl);
+  font-weight: 800;
+  margin: 0 0 var(--space-1);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: var(--color-text);
+}
+
+h2 {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  margin: 0;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+h3 {
+  font-size: var(--text-micro);
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 700;
+}
+
+h4 {
+  font-size: var(--text-base);
+  margin: var(--space-3) 0 var(--space-1);
+}
+
+button {
+  font-family: inherit;
+  font-size: var(--text-base);
+}
+
+select,
+input,
+textarea {
+  font-family: inherit;
+  font-size: var(--text-base);
+  padding: 0.42rem 0.6rem;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+
+select:hover,
+input:hover,
+textarea:hover {
+  border-color: var(--color-border-hover);
+}
+
+select:focus,
+input:focus,
+textarea:focus {
+  border-color: var(--color-cyan);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+/* Native <option> elements are rendered by the OS/browser chrome, not this
+   stylesheet, so they stay legible against the dark control regardless of
+   the platform's own light/dark popup styling. */
+select option {
+  color: #16202e;
+  background: #ffffff;
+}
+
+/* One control height (34px, the same as .btn) for every text/select input,
+   so a filter toolbar's selects, its search box and any button beside them
+   sit on one line at one height rather than each at its own intrinsic
+   height. Checkboxes and radios keep their native box; textareas keep
+   growing from their rows attribute. */
+select,
+input:not([type='checkbox']):not([type='radio']) {
+  min-height: 36px;
+}
+
+/* Keyboard focus must always be visible, on every interactive element. */
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Links: accent colour, never the browser's default visited purple. */
+a {
+  color: var(--color-cyan);
+  text-underline-offset: 3px;
+}
+
+a:visited {
+  color: var(--color-cyan);
+}
+
+a:hover {
+  color: var(--color-link-hover);
+}
+
+a.btn,
+a.btn:visited {
+  color: inherit;
+}
+
+a.btn-secondary,
+a.btn-secondary:visited {
+  color: var(--color-text);
+}
+
+a.btn-primary,
+a.btn-primary:visited {
+  color: #ffffff;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* =============================================================== layout == */
+
+.app-shell {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: linear-gradient(180deg, #0d1c30 0%, var(--color-sidebar-bg) 60%);
+  color: var(--color-sidebar-text);
+  padding: var(--space-5) var(--space-3) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--color-sidebar-border);
+  position: relative;
+  z-index: 1;
+}
+
+.sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 700;
+  font-size: var(--text-md);
+  letter-spacing: -0.01em;
+  color: var(--color-sidebar-text-strong);
+  padding: 0 var(--space-2) var(--space-4);
+  margin-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-sidebar-border);
+}
+
+/* The drawer's own close control. Hidden on desktop, where the sidebar is a permanent
+   column and there is nothing to close. */
+.sidebar-close {
+  display: none;
+  margin-left: auto;
+  flex-shrink: 0;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-sidebar-border);
+  background: none;
+  color: var(--color-sidebar-text);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sidebar-close:hover {
+  background: rgba(140, 180, 230, 0.12);
+  color: var(--color-sidebar-text-strong);
+}
+
+/* Never rendered on desktop; at drawer widths it covers the page behind the drawer. It is
+   BELOW the drawer (20) and ABOVE the header (5), so a tap outside the drawer reaches the
+   scrim rather than a header control hidden underneath it. */
+.sidebar-scrim {
+  display: none;
+}
+
+.sidebar-brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, rgba(47, 124, 232, 0.28), rgba(46, 192, 239, 0.18));
+  border: 1px solid rgba(46, 192, 239, 0.3);
+  color: var(--color-sidebar-accent);
+  font-size: 0.95rem;
+}
+
+.nav-list,
+.nav-sublist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nav-group + .nav-group {
+  margin-top: var(--space-5);
+}
+
+.nav-section-label {
+  padding: var(--space-1) var(--space-3) var(--space-2);
+  font-size: var(--text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-sidebar-muted);
+}
+
+.nav-link {
+  position: relative;
+  display: block;
+  padding: 0.55rem 0.8rem 0.55rem 0.95rem;
+  font-size: var(--text-base);
+  border-radius: var(--radius-sm);
+  color: var(--color-sidebar-text);
+  text-decoration: none;
+  line-height: 1.35;
+  transition: background var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
+}
+
+.nav-link:hover {
+  background: rgba(140, 180, 230, 0.07);
+  color: var(--color-sidebar-text-strong);
+}
+
+/* Active item: a tinted rounded surface with a short cyan indicator bar
+   inside the left edge - no glow. */
+.nav-link.active {
+  background: var(--color-sidebar-active-bg);
+  color: var(--color-sidebar-text-strong);
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(46, 192, 239, 0.18);
+}
+
+.nav-link.active::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 22%;
+  bottom: 22%;
+  width: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--color-sidebar-accent);
+}
+
+.sidebar-footnote {
+  margin-top: auto;
+  padding: var(--space-4) var(--space-2) 0;
+  border-top: 1px solid var(--color-sidebar-border);
+  font-size: var(--text-xs);
+  color: var(--color-sidebar-muted);
+  line-height: 1.45;
+}
+
+.app-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 62px;
+  padding: 0 var(--content-gutter);
+  background: var(--color-header-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.app-header-spacer {
+  flex: 1;
+}
+
+/* Page identity in the top bar. Derived from the current route only — it
+   mirrors the page's own PageHeader title, it is not a second source of
+   truth and carries no state of its own. Above the ~1000px breakpoint the
+   page's own <h1> already carries the full title, so only the section
+   breadcrumb (Operations / Administration) shows here — below it, where
+   the sidebar collapses behind the Menu toggle, the full title reappears
+   as the only visible page label. */
+.app-header-context {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.app-header-eyebrow {
+  font-size: var(--text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--color-text-muted);
+}
+
+.app-header-title {
+  font-size: var(--text-md);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (min-width: 1001px) {
+  .app-header-title {
+    display: none;
+  }
+}
+
+/* The sidebar is permanently visible above the 1000px collapse breakpoint,
+   so the Menu toggle has nothing to toggle there and is hidden by CSS only
+   — the button stays in the DOM with its aria-expanded/aria-controls intact
+   and becomes visible again at the width where the sidebar actually
+   collapses (see the max-width: 1000px block at the end of this file).
+   Scoped under .app-header so it outranks the later `.btn { display:
+   inline-flex }` rule — a bare .nav-toggle selector has equal specificity and
+   lost the cascade, leaving a dead Menu button visible on desktop. */
+.app-header .nav-toggle {
+  display: none;
+}
+
+.user-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding-left: var(--space-4);
+  border-left: 1px solid var(--color-border);
+}
+
+.user-summary-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+
+.user-name {
+  font-weight: 650;
+  font-size: var(--text-base);
+}
+
+.user-meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.app-content {
+  padding: var(--space-5) var(--content-gutter) var(--space-6);
+  max-width: var(--content-max);
+  width: 100%;
+  margin: 0 auto;
+}
+
+.full-page-status {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: 60vh;
+}
+
+/* Session bootstrap ("Loading…" before the shell renders): a calm centred
+   spinner rather than bare text. */
+.full-page-status::before {
+  content: '';
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  border: 2px solid var(--color-border-strong);
+  border-top-color: var(--color-cyan);
+  animation: state-spin 0.8s linear infinite;
+}
+
+/* ======================================================== page furniture == */
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.page-header-main {
+  min-width: 0;
+}
+
+.page-header-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.page-header-meta,
+.page-header-count {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-top: var(--space-1);
+}
+
+/* Prose stays at a readable measure even though tables and grouped rows
+   below use the full content width. */
+.page-intro {
+  color: var(--color-text-muted);
+  margin: 0;
+  font-size: var(--text-base);
+  max-width: 82ch;
+}
+
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+  transition: box-shadow var(--duration-base) var(--ease-out), border-color var(--duration-base) var(--ease-out);
+}
+
+.panel-header,
+.page-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* A section title inside a surface — clearly below the page h1. */
+.panel-header h2,
+.section-title {
+  font-size: var(--text-md);
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+
+.overview-section {
+  margin-bottom: var(--space-6);
+}
+
+.overview-section-link {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* A toolbar strip that sits flush above a table inside the same surface,
+   instead of a filter control floating in its own box. */
+.table-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding-bottom: var(--space-3);
+  margin-bottom: var(--space-1);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table-toolbar-heading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.table-toolbar-count {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.table-toolbar-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.table-toolbar-controls .field {
+  margin-bottom: 0;
+  max-width: 260px;
+}
+
+/* ================================================================ forms == */
+
+.field {
+  margin-bottom: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 420px;
+}
+
+.field-inline {
+  margin-bottom: 0;
+}
+
+.field-label {
+  font-weight: 650;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+
+/* Marks a required field's label with a decorative asterisk (paired with
+   aria-required on the control itself, so the requirement is never
+   conveyed by this glyph alone). A ::after pseudo-element rather than a
+   span inside the <label> — it's excluded from the label's real text
+   content, so getByLabelText/htmlFor association still resolves to the
+   field's plain name (e.g. "Schedule", not "Schedule *"). */
+.field-label-required::after {
+  content: ' *';
+  color: var(--color-danger);
+}
+
+[aria-invalid='true'] {
+  border-color: var(--color-danger) !important;
+}
+
+.field-hint {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  max-width: 78ch;
+}
+
+.field-loading,
+.field-empty {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* Small inline fetches (search results, family/section lists): a compact
+   spinner before the existing "Loading …" text. */
+.field-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.field-loading::before {
+  content: '';
+  width: 0.8rem;
+  height: 0.8rem;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--color-border-strong);
+  border-top-color: var(--color-cyan);
+  animation: state-spin 0.8s linear infinite;
+}
+
+/* --- action hierarchy -----------------------------------------------------
+   primary   (filled)          forward workflow progression: Shed In, Start
+                               Work, Mark Attended, Save Mapping
+   secondary (outlined)        navigational-but-important: Open Workflow,
+                               Details, Try again, Cancel
+   attention (warm outline)    Reopen — distinct and cautionary without the
+                               alarm of a solid red destructive button
+   danger    (filled red)      only the final confirm of a destructive act
+   Plain <a> links stay links for pure navigation (sidebar, cross-page). */
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  padding: 0.5rem 1rem;
+  min-height: 36px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: var(--text-base);
+  line-height: 1.3;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-base) var(--ease-out),
+    background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #3a88f0, var(--color-primary));
+  color: #fff;
+  border-color: rgba(120, 175, 245, 0.35);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.12) inset, 0 4px 14px rgba(20, 70, 150, 0.35);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #4592f4, #3584ee);
+  transform: translateY(-1px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.14) inset, 0 8px 20px rgba(20, 70, 150, 0.42);
+}
+
+.btn-secondary {
+  background: var(--color-surface-raised);
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  border-color: rgba(92, 203, 245, 0.55);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background: linear-gradient(180deg, #e8667c, #d9536a);
+  color: #ffffff;
+  border-color: rgba(244, 124, 144, 0.5);
+  font-weight: 700;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ee7086, #df5c73);
+}
+
+/* Busy (aria-busy="true", set while this button's own request is in flight):
+   the label stays in the layout but turns transparent, and a compact spinner
+   sits in its place - so the button keeps its exact width, cannot be
+   re-clicked (callers also set disabled), and announces busy to assistive
+   technology. Busy buttons are not dimmed like ordinary disabled ones. */
+.btn[aria-busy='true'] {
+  color: transparent !important;
+  cursor: progress;
+  opacity: 1;
+}
+
+.btn[aria-busy='true']::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 1em;
+  height: 1em;
+  margin: -0.5em 0 0 -0.5em;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  animation: state-spin 0.7s linear infinite;
+}
+
+.btn-secondary[aria-busy='true']::after,
+.btn-attention[aria-busy='true']::after,
+.btn-danger-outline[aria-busy='true']::after {
+  border-color: var(--color-border-strong);
+  border-top-color: var(--color-cyan);
+}
+
+/* Attention, not alarm: a warm outline for Reopen and similar. */
+.btn-attention,
+.btn-danger-outline {
+  background: var(--color-surface-sunken);
+  border-color: var(--color-warn-border);
+  color: var(--color-warn);
+}
+
+.btn-attention:hover:not(:disabled),
+.btn-danger-outline:hover:not(:disabled) {
+  background: var(--color-warn-bg);
+  border-color: var(--color-warn);
+  transform: translateY(-1px);
+}
+
+.btn-small {
+  padding: 0.34rem 0.7rem;
+  min-height: 32px;
+  font-size: var(--text-sm);
+  border-radius: 9px;
+}
+
+.form-error,
+.form-success {
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0;
+  font-size: var(--text-sm);
+  animation: feedback-in var(--duration-base) var(--ease-out);
+}
+
+.form-error {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger-border);
+}
+
+/* The Ready blocker: a count the operator can act on, then the outstanding checksheets. Styled as
+   an error panel rather than a list of controls — there is nothing to click, because the rule
+   cannot be overridden. */
+.checksheet-blocker-message {
+  margin: 0;
+  font-weight: 600;
+}
+
+.checksheet-blocker-counts {
+  margin: var(--space-1) 0 0;
+  opacity: 0.85;
+}
+
+.checksheet-blocker-list {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+  max-height: 11rem;
+  overflow-y: auto;
+}
+
+.checksheet-blocker-list li {
+  margin-bottom: var(--space-1);
+}
+
+.checksheet-blocker-stage,
+.checksheet-blocker-reason {
+  opacity: 0.85;
+}
+
+/* Success: subtle — a small check that draws in once, no celebration. */
+.form-success {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border: 1px solid var(--color-success-border);
+}
+
+.form-success::before {
+  content: '';
+  flex-shrink: 0;
+  width: 0.55em;
+  height: 0.95em;
+  margin: 0 0.2em 0.15em 0.15em;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  animation: check-in 260ms var(--ease-out) both;
+}
+
+@keyframes feedback-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes check-in {
+  from {
+    opacity: 0;
+    transform: rotate(45deg) scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(45deg) scale(1);
+  }
+}
+
+/* ========================================================= status system == */
+
+/* Sizing is uniform wherever a badge appears — booking/assignment status,
+   visit status and checksheet lifecycle all render at the same two sizes,
+   so a status never looks more or less important by accident. The colour
+   and glyph mapping itself lives in src/lib/status.ts and is untouched. */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: var(--radius-pill);
+  padding: 0.2rem 0.65rem;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.35;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.status-badge-small {
+  font-size: var(--text-xs);
+  padding: 0.15rem 0.55rem;
+}
+
+.status-badge-glyph {
+  font-size: 0.9em;
+  line-height: 1;
+}
+
+.status-badge-neutral {
+  background: var(--color-neutral-bg);
+  color: var(--color-neutral);
+  border-color: var(--color-neutral-border);
+}
+
+.status-badge-info {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+  border-color: var(--color-info-border);
+}
+
+.status-badge-active {
+  background: var(--color-active-bg);
+  color: var(--color-active);
+  border-color: var(--color-active-border);
+}
+
+.status-badge-success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: var(--color-success-border);
+}
+
+.status-badge-warn {
+  background: var(--color-warn-bg);
+  color: var(--color-warn);
+  border-color: var(--color-warn-border);
+}
+
+.status-badge-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+  border-color: var(--color-danger-border);
+}
+
+/* Same box metrics as .status-badge-small (13px text, 0.15rem/0.55rem
+   padding, 1.35 line-height, 1px border) so a tag and a small status badge
+   on the same line are exactly the same height — only the corner radius
+   differs, which is the deliberate signal that a tag is not a status. */
+.tag {
+  display: inline-block;
+  border-radius: var(--radius-sm);
+  padding: 0.15rem 0.55rem;
+  font-size: var(--text-xs);
+  font-weight: 650;
+  line-height: 1.35;
+  background: var(--color-neutral-bg);
+  color: var(--color-neutral);
+  border: 1px solid var(--color-neutral-border);
+}
+
+.tag-info {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+  border-color: var(--color-info-border);
+}
+
+.tag-success {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  border-color: var(--color-success-border);
+}
+
+/* Legacy badge classes still used by the equipment-mapping screens. */
+.badge {
+  display: inline-block;
+  border-radius: var(--radius-pill);
+  padding: 0.15rem 0.55rem;
+  font-size: var(--text-xs);
+  font-weight: 650;
+  /* Matches .status-badge-small/.tag exactly — the transparent border is
+     what keeps the box the same height as the bordered ones. */
+  line-height: 1.35;
+  border: 1px solid transparent;
+}
+
+.badge-neutral {
+  background: var(--color-neutral-bg);
+  color: var(--color-neutral);
+}
+
+.badge-direct {
+  background: var(--color-info-bg);
+  color: var(--color-info);
+}
+
+.badge-resolved {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.badge-danger {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+/* ================================================ loading / empty / error == */
+
+.state-block {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: var(--text-base);
+  margin: var(--space-2) 0;
+}
+
+.state-loading {
+  align-items: center;
+}
+
+.state-empty {
+  border-style: dashed;
+  border-color: var(--color-border-strong);
+}
+
+.state-error {
+  background: var(--color-danger-bg);
+  border-color: var(--color-danger-border);
+  color: var(--color-danger);
+}
+
+.state-unauthorized {
+  background: var(--color-neutral-bg);
+  border-color: var(--color-border-strong);
+  color: var(--color-text);
+}
+
+.state-glyph {
+  font-weight: 700;
+  font-size: var(--text-md);
+  line-height: 1.3;
+}
+
+.state-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.state-error .state-title {
+  color: var(--color-danger);
+}
+
+.state-description {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+}
+
+.state-action {
+  margin-top: var(--space-2);
+}
+
+.state-spinner {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
+  border: 2px solid var(--color-border-strong);
+  border-top-color: var(--color-cyan);
+  border-radius: 50%;
+  display: inline-block;
+  animation: state-spin 0.8s linear infinite;
+}
+
+@keyframes state-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* --- skeletons ------------------------------------------------------------
+   Layout-shaped placeholders for a first load (see LoadingState's `layout`
+   prop). Pure CSS: rounded blocks on the raised surface with one soft
+   cyan-blue highlight sweeping across (transform-only, GPU-composited). They
+   are aria-hidden; the visible "Loading …" line beside them carries
+   role="status" for assistive technology. */
+.state-loading-skeleton {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.state-loading-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  margin-bottom: var(--space-3);
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  display: block;
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-sm);
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(92, 170, 240, 0.09) 45%, rgba(120, 200, 245, 0.14) 50%, transparent);
+  animation: skeleton-sweep 1.5s var(--ease-out) infinite;
+}
+
+@keyframes skeleton-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-line {
+  height: 0.8rem;
+  border-radius: var(--radius-xs);
+}
+
+.skeleton-line-lg {
+  height: 1.35rem;
+}
+
+.skeleton-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.skeleton-metric,
+.skeleton-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  min-height: 116px;
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.skeleton-list {
+  border-radius: var(--radius);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: var(--space-2);
+}
+
+.skeleton-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1.1fr) repeat(3, minmax(80px, 1fr)) 110px;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-4);
+}
+
+.skeleton-row + .skeleton-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.skeleton-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-4);
+}
+
+/* A refresh with data already on screen: the content stays put and this small
+   indicator shows the update is in flight - the page never blanks. */
+.refresh-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.refresh-indicator .state-spinner {
+  width: 0.8rem;
+  height: 0.8rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .state-spinner,
+  .btn[aria-busy='true']::after {
+    animation-duration: 2.4s;
+  }
+
+  .skeleton::after {
+    animation: none;
+    display: none;
+  }
+
+  .form-error,
+  .form-success,
+  .form-success::before {
+    animation: none;
+  }
+}
+
+/* ============================================================== metrics == */
+
+/* Four equal columns across the full content width on desktop, so the
+   metrics read as one banded row rather than small cards adrift in
+   whitespace. Collapses to two, then one, at narrower widths. */
+.metric-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+/* Dashboard metric card: a raised rounded surface with a small accent mark
+   (bar + soft corner tint) instead of a bright top rule; number first, label
+   and hint beneath. Attention tone swaps the accent to amber - static, no
+   pulsing. */
+.metric-card {
+  --metric-accent: var(--color-cyan);
+  --metric-tint: rgba(46, 192, 239, 0.08);
+  background: linear-gradient(160deg, var(--color-surface-raised), var(--color-surface-solid) 70%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 124px;
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  left: var(--space-5);
+  top: 0;
+  width: 36px;
+  height: 3px;
+  border-radius: 0 0 var(--radius-pill) var(--radius-pill);
+  background: var(--metric-accent);
+  pointer-events: none;
+}
+
+.metric-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(160px 110px at 100% 0%, var(--metric-tint), transparent 70%);
+  pointer-events: none;
+}
+
+.metric-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--glow-hover);
+}
+
+.metric-card-attention {
+  --metric-accent: var(--color-warn);
+  --metric-tint: rgba(245, 180, 84, 0.06);
+}
+
+.metric-card-label {
+  font-size: var(--text-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--color-text-muted);
+  font-weight: 700;
+  order: 2;
+  margin-top: var(--space-2);
+}
+
+.metric-card-value {
+  font-family: 'JetBrains Mono Variable', 'JetBrains Mono', 'Manrope Variable', 'Manrope', monospace;
+  font-size: 2.5rem;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+  order: 1;
+}
+
+.metric-card-attention .metric-card-value {
+  color: var(--color-warn);
+}
+
+.metric-card-hint {
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  order: 3;
+  margin-top: auto;
+  line-height: 1.4;
+}
+
+/* Retained for any remaining summary-card markup. */
+.section-summary-cards {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+/* ============================================================ locomotive == */
+
+.loco-number {
+  font-size: var(--text-loco);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.loco-number-xl {
+  font-size: var(--text-loco-xl);
+  line-height: 1.1;
+}
+
+/* Active shed visits: dense full-width rows inside ONE surface, divided by
+   rules rather than one bordered card per locomotive. The list endpoint
+   (GET /api/shed-visits/current) carries no stage or readiness field, so no
+   progress dimension is shown here — see LocoVisitCard.tsx. */
+/* One enclosing rounded panel; each locomotive is a soft rounded work item
+   inside it, separated by spacing and surface rather than grid lines. */
+.loco-visit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-2);
+}
+
+.loco-visit-card {
+  display: grid;
+  /* The action track is a FIXED width, not `auto`: with `auto` the track
+     collapsed to 0 on any row whose visit has no workflow link, which
+     redistributed every other track and left the "Open workflow" buttons
+     landing at a different x on each row. A fixed track makes every row's
+     grid resolve identically, so the buttons line up down the list and the
+     fact columns stay put whether a row has a button or not. */
+  grid-template-columns: minmax(190px, 1.1fr) minmax(150px, 0.9fr) minmax(140px, 0.9fr) minmax(180px, 1fr) 140px;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
+  position: relative;
+  border-radius: var(--radius-md);
+  background: var(--color-card-inset);
+  border: 1px solid transparent;
+  transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
+}
+
+.loco-visit-card:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border);
+}
+
+/* Pending bookings: a short amber marker inside the row's left edge (the
+   "N pending of M" text carries the same meaning without colour). */
+.loco-visit-card-attention::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 18%;
+  bottom: 18%;
+  width: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--color-warn);
+}
+
+.loco-visit-card-identity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.loco-visit-card-identity-top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.loco-visit-card-identity .loco-number {
+  font-size: var(--text-loco-lg);
+}
+
+/* Schedule as a compact badge (IA / IA0 / IOH ...). */
+.loco-visit-card-schedule {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.05rem 0.5rem;
+  border-radius: var(--radius-xs);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+  background: rgba(140, 180, 230, 0.1);
+  border: 1px solid var(--color-border-strong);
+  font-family: 'JetBrains Mono Variable', 'JetBrains Mono', 'Manrope Variable', monospace;
+}
+
+.loco-visit-card-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.loco-visit-card-fact-label {
+  font-size: var(--text-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-faint);
+  font-weight: 700;
+}
+
+.loco-visit-card-fact-value {
+  font-size: var(--text-base);
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.loco-visit-card-pending {
+  color: var(--color-warn);
+  font-weight: 700;
+}
+
+.loco-visit-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+@media (max-width: 1200px) {
+  .loco-visit-card {
+    grid-template-columns: minmax(170px, 1fr) minmax(140px, 1fr) minmax(160px, 1fr);
+    align-items: start;
+  }
+
+  .loco-visit-card-actions {
+    grid-column: -2 / -1;
+    justify-content: flex-start;
+  }
+}
+
+.loco-context-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  background: linear-gradient(160deg, var(--color-surface-raised), var(--color-surface-solid) 70%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-5);
+}
+
+.loco-context-header h1 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.loco-context-label {
+  font-size: var(--text-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-faint);
+  font-weight: 700;
+}
+
+.loco-context-schedule {
+  font-size: var(--text-md);
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.loco-context-meta {
+  margin: 0;
+  display: flex;
+  gap: var(--space-5);
+  font-size: var(--text-sm);
+}
+
+.loco-context-meta dt {
+  color: var(--color-text-faint);
+  font-size: var(--text-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.loco-context-meta dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+/* The Overview's "Go to Section Dashboard / Shed Movement / Booking Pool"
+   quick-link cards were removed — they duplicated the permanent sidebar
+   nav. Their styles are gone with them. */
+
+/* =============================================================== tables == */
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.data-table,
+.shed-visits-table,
+.checksheet-list-table,
+.required-checksheets-table,
+.booking-detail-assignments-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-base);
+}
+
+.data-table th,
+.data-table td,
+.shed-visits-table th,
+.shed-visits-table td {
+  text-align: left;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td,
+.shed-visits-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table thead th,
+.shed-visits-table th {
+  color: var(--color-text-muted);
+  font-weight: 700;
+  font-size: var(--text-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  background: var(--color-surface-sunken);
+  border-bottom: 1px solid var(--color-border-strong);
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.data-table tbody tr,
+.shed-visits-table tbody tr {
+  transition: background var(--duration-fast) var(--ease-out);
+}
+
+.data-table tbody tr:hover,
+.shed-visits-table tbody tr:hover {
+  background: rgba(140, 180, 230, 0.05);
+}
+
+/* A table that is a panel's main content gets rounded header corners. */
+.data-table thead th:first-child {
+  border-top-left-radius: var(--radius-sm);
+}
+
+.data-table thead th:last-child {
+  border-top-right-radius: var(--radius-sm);
+}
+
+.data-table .numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-md);
+}
+
+.data-table .cell-muted {
+  color: var(--color-text-muted);
+}
+
+.data-table .cell-actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Attention accent: a row whose data already flags outstanding work. The
+   condition is the row's own pending count — no new rule is introduced. */
+.row-attention td:first-child {
+  box-shadow: inset 3px 0 0 rgba(245, 180, 84, 0.85);
+}
+
+.count-attention {
+  color: var(--color-warn);
+  font-weight: 700;
+}
+
+/* ========================================================= equipment group */
+
+/* An equipment group is a HEADING over its rows/cards, not another card.
+   Previously a bordered, shadowed box wrapped bordered cards inside a
+   bordered page — three nested surfaces. Now the group itself has no
+   surface at all: a rule under the header separates it, and the single
+   surface boundary belongs to what sits inside (the assignment cards on the
+   Section Dashboard, or the table on the Booking Pool). */
+.equipment-group {
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  margin-bottom: var(--space-6);
+}
+
+.equipment-group-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+  flex-wrap: wrap;
+  padding: 0 var(--space-1) var(--space-2);
+  margin-bottom: var(--space-3);
+  background: none;
+  border-bottom: 1px solid var(--color-border-strong);
+}
+
+.equipment-group-header h2 {
+  font-size: var(--text-md);
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The ancestor path is context, so it stays quiet and never competes with
+   the equipment name it prefixes. */
+.equipment-group-path {
+  color: var(--color-text-faint);
+  font-weight: 400;
+  font-size: var(--text-sm);
+  letter-spacing: 0;
+}
+
+.equipment-group-count {
+  font-weight: 400;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A compact inline tally, not four separate boxes. */
+.equipment-group-counts {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+.count-pill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: var(--text-xs);
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  background: var(--color-neutral-bg);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.count-pill-value {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.count-pill-zero {
+  opacity: 0.55;
+}
+
+.count-pill-open .count-pill-value {
+  color: var(--color-neutral);
+}
+
+.count-pill-active .count-pill-value {
+  color: var(--color-active);
+}
+
+.count-pill-done .count-pill-value {
+  color: var(--color-success);
+}
+
+.count-pill-attention {
+  background: var(--color-warn-bg);
+  border-color: var(--color-warn-border);
+}
+
+.count-pill-attention .count-pill-value {
+  color: var(--color-warn);
+}
+
+.equipment-group-body {
+  padding: 0;
+}
+
+/* The Booking Pool's table is the group's single surface. */
+.booking-pool-group .equipment-group-body {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+/* Two to three assignment cards per row where the width allows: 380px min
+   avoids both cramped columns and one-card-per-row waste at 1280–1600px. */
+.section-dashboard-equipment-group-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: var(--space-3);
+  padding: 0;
+  /* Cards in one grid row share that row's height (the default `stretch`,
+     replacing `start`). A minimal OPEN assignment and an ATTENDED one with
+     a full timestamp history no longer sit as two different-height boxes
+     side by side. Nothing is truncated or hidden to achieve it — the
+     shorter card simply carries its slack above its action row, which
+     `margin-top: auto` on .assignment-card-actions pins to the bottom. */
+  align-items: stretch;
+}
+
+/* ============================================================== filters == */
+
+/* One compact horizontal toolbar row — Equipment | Status | Source | Search
+   — that wraps cleanly rather than spreading across the full width. */
+.filter-bar {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.filter-bar-inline {
+  padding: var(--space-2) var(--space-3);
+}
+
+.filter-bar-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: flex-end;
+}
+
+.filter-bar-fields .field {
+  margin-bottom: 0;
+  max-width: 230px;
+  flex: 0 1 190px;
+}
+
+/* The free-text search is the widest control and closes the toolbar. */
+.filter-bar-fields .field-search {
+  flex: 1 1 240px;
+  max-width: 380px;
+}
+
+.active-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px dashed var(--color-border);
+}
+
+.active-filters-label {
+  font-size: var(--text-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--color-text-faint);
+  font-weight: 700;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  border: 1px solid var(--color-info-border);
+  background: var(--color-info-bg);
+  color: var(--color-info);
+  border-radius: var(--radius-pill);
+  padding: 0.18rem 0.65rem;
+  font-size: var(--text-xs);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.filter-chip:hover {
+  background: var(--color-primary-soft);
+}
+
+.filter-chip-clear {
+  font-size: var(--text-md);
+  line-height: 1;
+}
+
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.segmented-option {
+  background: var(--color-surface);
+  border: none;
+  border-right: 1px solid var(--color-border);
+  padding: 0.4rem 0.85rem;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--color-text-muted);
+}
+
+.segmented-option:last-child {
+  border-right: none;
+}
+
+.segmented-option-active {
+  background: var(--color-primary);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ========================================================= booking rows == */
+
+.booking-row td {
+  vertical-align: top;
+}
+
+.booking-row-reopened td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-warn);
+}
+
+.booking-row-loco {
+  display: table-cell;
+  white-space: nowrap;
+}
+
+.booking-row-schedule {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.booking-row-defect {
+  min-width: 18rem;
+}
+
+.booking-row-description {
+  margin: 0 0 var(--space-2);
+  overflow-wrap: anywhere;
+}
+
+.booking-row-source span {
+  display: block;
+}
+
+.booking-row-source {
+  font-size: var(--text-sm);
+}
+
+.booking-row-stage {
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+}
+
+.booking-row-created,
+.booking-row-handling {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.booking-row-created {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.booking-row-handling-line {
+  color: var(--color-text);
+}
+
+/* "Not started" / "No handler recorded" is the ABSENCE of a handler, not a
+   handler — it must not carry the same visual weight as an actual
+   person/section/timestamp (see BookingRow.tsx for which of the two
+   wordings is truthful for which status). */
+.booking-row-handling-none {
+  color: var(--color-text-faint);
+  font-style: italic;
+  font-size: var(--text-xs);
+}
+
+.booking-row-remarks {
+  margin: var(--space-1) 0 0;
+  white-space: normal;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+/* ====================================================== assignment cards == */
+
+/* The assignment card is the ONE surface in its group (the group header
+   above it is a rule, not a box). Inside it, hierarchy comes from type
+   weight/size and a single divider — not from more boxes. */
+.assignment-card {
+  --card-accent: var(--color-cyan);
+  position: relative;
+  background: linear-gradient(165deg, var(--color-surface-raised), var(--color-surface-solid) 70%);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-4) var(--space-5);
+  font-size: var(--text-base);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  transition: transform var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+
+/* Shared small accent mark for cards whose tone used to be a full top rule. */
+.assignment-card::before,
+.stage-list-item::before {
+  content: '';
+  position: absolute;
+  left: var(--space-5);
+  top: 0;
+  width: 32px;
+  height: 3px;
+  border-radius: 0 0 var(--radius-pill) var(--radius-pill);
+  background: var(--card-accent);
+  pointer-events: none;
+}
+
+.assignment-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--color-border-strong);
+  box-shadow: var(--glow-hover);
+}
+
+.assignment-card-attention {
+  --card-accent: var(--color-warn);
+}
+
+/* Strong tier: loco number, equipment, status — all on one line. */
+.assignment-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.assignment-card-identity {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.assignment-card-equipment {
+  font-weight: 700;
+  font-size: var(--text-md);
+  margin: 0;
+  letter-spacing: -0.005em;
+  overflow-wrap: anywhere;
+}
+
+/* Secondary tier: defect type, description, timestamps. */
+.assignment-card-tags {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.assignment-card-description {
+  color: var(--color-text);
+  margin: 0;
+  font-size: var(--text-base);
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+/* No margin of its own: the card is a flex column with a var(--space-2)
+   gap, so an extra top margin here made the space above the meta divider
+   the odd one out in the card's vertical rhythm. */
+.assignment-card-meta {
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.assignment-card-meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.assignment-card-meta dt {
+  font-weight: 650;
+  color: var(--color-text-faint);
+  flex-shrink: 0;
+}
+
+/* Remarks can be long — they wrap rather than overflowing the card. */
+.assignment-card-meta dd {
+  margin: 0;
+  text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.assignment-card-status-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.assignment-card-status-label {
+  color: var(--color-text-faint);
+  font-weight: 650;
+  font-size: var(--text-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Pinned to the bottom of the card so the action row sits on one line
+   across every card in a grid row, however much history the card carries
+   above it. */
+.assignment-card-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: auto;
+  padding-top: var(--space-1);
+}
+
+/* Details is the quietest action and sits apart from the workflow ones. */
+.assignment-card-actions .assignment-card-details-btn {
+  margin-left: auto;
+}
+
+/* ================================================== confirm action block == */
+
+.confirm-action {
+  margin-top: var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  padding: var(--space-3);
+}
+
+.confirm-action-title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.confirm-action-description {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.confirm-action-field {
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.confirm-action-field textarea,
+.assignment-card-inline-form textarea {
+  width: 100%;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.confirm-action-buttons {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.confirm-clear {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  flex-wrap: wrap;
+}
+
+/* ======================================================= workflow stages == */
+
+.stage-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+}
+
+.stage-list-item {
+  --card-accent: var(--color-border-strong);
+  position: relative;
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border);
+}
+
+.stage-progress-card-in_progress {
+  --card-accent: var(--color-active);
+  background: var(--color-surface-raised);
+  border-color: var(--color-active-border);
+}
+
+.stage-progress-card-completed {
+  --card-accent: var(--color-success);
+}
+
+.stage-progress-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.stage-list-order {
+  font-weight: 700;
+  color: var(--color-text-faint);
+}
+
+.stage-list-name {
+  flex: 1;
+  font-weight: 700;
+  min-width: 7rem;
+}
+
+.stage-progress-facts {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stage-progress-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.stage-progress-facts dt {
+  color: var(--color-text-faint);
+}
+
+.stage-progress-facts dd {
+  margin: 0;
+  text-align: right;
+  font-weight: 600;
+}
+
+.stage-progress-attention {
+  color: var(--color-warn);
+}
+
+.stage-progress-flag {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.stage-progress-flag-danger {
+  color: var(--color-danger);
+}
+
+/* Blocked: PENDING only because the previous stage in the sequence hasn't
+   completed yet — distinct from a plain not-started PENDING card. Colour is
+   never the only signal: the "Waiting" tag next to the status badge carries
+   the same meaning in text. */
+.stage-progress-card-blocked {
+  --card-accent: var(--color-warn);
+  opacity: 0.85;
+}
+
+/* The workflow rail: the existing stage-list strip, extended with one more
+   node representing Shed Out so the whole TB → SI → TA → Shed Out sequence
+   reads as one flow. Purely visual — Shed Out itself stays a separate,
+   fully-rendered panel further down the page. */
+.workflow-rail-shedout {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px dashed var(--color-border);
+  font-size: var(--text-sm);
+}
+
+.workflow-rail-arrow {
+  color: var(--color-text-faint);
+  font-weight: 700;
+}
+
+.workflow-rail-shedout-label {
+  font-weight: 700;
+}
+
+/* ================================================== shed out readiness ==== */
+
+/* The Shed Out panel itself, one visual step up from a plain .panel so it
+   reads as the destination of the workflow rather than just another stage
+   section — a stronger border/shadow, then a colour lean once we know
+   whether it's ready or blocked (still never colour-only: the headline text
+   and glyph inside ShedOutReadinessPanel carry the same meaning). */
+.panel-shedout {
+  border-width: 1px;
+  box-shadow: var(--shadow-card-lg, var(--shadow-card));
+}
+
+.panel-shedout-ready {
+  border-color: var(--color-success-border);
+}
+
+.panel-shedout-blocked {
+  border-color: var(--color-warn-border);
+}
+
+.panel-shedout-done {
+  border-color: var(--color-border-strong);
+}
+
+.readiness-panel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: var(--color-surface-sunken);
+}
+
+.readiness-panel-ready {
+  background: var(--color-success-bg);
+  border-color: var(--color-success-border);
+}
+
+.readiness-panel-blocked {
+  background: var(--color-warn-bg);
+  border-color: var(--color-warn-border);
+}
+
+.readiness-headline {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.readiness-headline-glyph {
+  font-size: var(--text-lg);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.readiness-panel-ready .readiness-headline-glyph,
+.readiness-panel-ready .readiness-headline-text {
+  color: var(--color-success);
+}
+
+.readiness-panel-blocked .readiness-headline-glyph,
+.readiness-panel-blocked .readiness-headline-text {
+  color: var(--color-warn);
+}
+
+.readiness-headline-text {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-md);
+}
+
+.readiness-headline-sub {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.readiness-reason-list {
+  margin: var(--space-1) 0 0;
+  padding-left: 1.1rem;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+
+.shed-out-readiness-list {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: var(--space-3) 0 0;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.shed-out-readiness-list li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.readiness-item-glyph {
+  font-weight: 700;
+  width: 1rem;
+}
+
+.readiness-item-ok .readiness-item-glyph {
+  color: var(--color-success);
+}
+
+.readiness-item-blocked .readiness-item-glyph {
+  color: var(--color-danger);
+}
+
+.readiness-item-text {
+  font-weight: 600;
+}
+
+.readiness-item-detail {
+  color: var(--color-text-muted);
+}
+
+.shed-out-form {
+  margin-top: var(--space-2);
+}
+
+.reconciliation-result-list {
+  margin: var(--space-3) 0 0;
+  padding-left: 1.1rem;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ================================================== checksheet progress == */
+
+.checksheet-progress-stage-list,
+.checksheet-progress-row-list,
+.required-checksheets-stage-list,
+.checksheet-stage-summary-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.checksheet-progress-stage-list > li {
+  padding-top: var(--space-3);
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.checksheet-progress-stage-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-content: space-between;
+}
+
+.checksheet-progress-row-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+/* A list of checksheets, separated by a left accent and spacing rather
+   than a full border per row inside an already-bordered panel. */
+.checksheet-progress-row {
+  border: none;
+  border-left: 3px solid var(--color-border-strong);
+  border-radius: var(--radius-xs) var(--radius-sm) var(--radius-sm) var(--radius-xs);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-surface-sunken);
+}
+
+.checksheet-progress-row-rejected {
+  border-left-color: var(--color-danger);
+  background: var(--color-danger-bg);
+}
+
+.checksheet-progress-row-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.checksheet-progress-template {
+  font-weight: 700;
+}
+
+.checksheet-progress-row-context {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.checksheet-progress-evidence {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.checksheet-progress-evidence li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.checksheet-evidence-note {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.checksheet-stage-summary-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.checksheet-stage-summary-list li {
+  border: none;
+  border-left: 2px solid var(--color-border);
+  border-radius: 0;
+  padding: var(--space-1) var(--space-3);
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+}
+
+.checksheet-stage-name {
+  font-size: var(--text-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
+.checksheet-stage-count {
+  font-weight: 700;
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.checksheet-list {
+  margin-top: var(--space-3);
+}
+
+.required-checksheets-stage-list > li {
+  margin-bottom: var(--space-4);
+}
+
+/* ================================================== test before findings == */
+
+.test-before-findings-form {
+  margin-bottom: var(--space-4);
+}
+
+.test-before-findings-actions {
+  margin-top: var(--space-3);
+}
+
+.test-before-booking-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.test-before-booking-card {
+  margin-bottom: 0;
+  box-shadow: none;
+}
+
+.test-before-booking-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-1);
+}
+
+.test-before-section-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.test-before-section-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.test-before-section-list a {
+  color: var(--color-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.test-before-reference-section,
+.test-after-findings-section {
+  margin-top: var(--space-4);
+}
+
+/* ============================================================== login ==== */
+
+/* Login — "railway control access terminal": a centered glass panel
+   bracketed like a HUD viewport, with a slow scanline sweep and a pulsing
+   brand mark. The animated mission-control backdrop (body::before/::after)
+   already shows through the page; this adds the terminal framing on top. */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-4);
+}
+
+.login-terminal {
+  position: relative;
+  width: min(92vw, 400px);
+}
+
+/* Four corner brackets, like a targeting/viewport reticle. Purely
+   decorative (aria-hidden) — no effect on the form's semantics. */
+/* The earlier targeting-reticle corners and scan sweep are retired visually
+   (their aria-hidden markup is harmless): the login is a calm card now. */
+.login-terminal-corner,
+.login-scanline {
+  display: none;
+}
+
+.login-terminal-corner {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
+
+.login-terminal-corner-tl {
+  top: -8px;
+  left: -8px;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 4px 0 0 0;
+}
+
+.login-terminal-corner-tr {
+  top: -8px;
+  right: -8px;
+  border-left: none;
+  border-bottom: none;
+  border-radius: 0 4px 0 0;
+}
+
+.login-terminal-corner-bl {
+  bottom: -8px;
+  left: -8px;
+  border-right: none;
+  border-top: none;
+  border-radius: 0 0 0 4px;
+}
+
+.login-terminal-corner-br {
+  bottom: -8px;
+  right: -8px;
+  border-left: none;
+  border-top: none;
+  border-radius: 0 0 4px 0;
+}
+
+/* A thin, slow-moving highlight band that sweeps down through the card,
+   clipped to the card's own rounded rect. transform-only (translateY), so
+   it costs no more than the backdrop drift and is covered by the same
+   prefers-reduced-motion shutoff. */
+.login-scanline {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--radius);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.login-scanline::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 40%;
+  top: -40%;
+  background: none;
+}
+
+
+.login-card {
+  background: linear-gradient(170deg, var(--color-surface-raised), var(--color-surface-solid) 65%);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6) var(--space-6) var(--space-5);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  box-shadow: var(--glow-primary);
+  position: relative;
+  z-index: 1;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
+}
+
+.login-brand-mark {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, rgba(47, 124, 232, 0.3), rgba(46, 192, 239, 0.16));
+  border: 1px solid rgba(46, 192, 239, 0.32);
+  font-size: 1.4rem;
+  line-height: 1;
+  color: var(--color-cyan);
+  flex-shrink: 0;
+}
+
+/* Static "system online" dot. */
+.login-terminal-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--color-success);
+  border: 2px solid var(--color-surface-solid);
+}
+
+.login-eyebrow {
+  margin: 0;
+  font-size: var(--text-micro);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--color-cyan);
+}
+
+.login-title {
+  margin: 0.1rem 0 0;
+  font-size: var(--text-lg);
+}
+
+.login-subtitle {
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.login-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.login-submit {
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.login-footnote {
+  margin: var(--space-3) 0 0;
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--color-text-faint);
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 400px) {
+  .login-card {
+    padding: var(--space-5) var(--space-3);
+  }
+}
+
+/* ================================================== equipment mapping ==== */
+
+/* Search-only equipment selection on a Log Book booking row. The cascading
+   "Equipment / Level 2 / ..." dropdowns that used to sit beside the search box
+   are gone from booking forms - they were a second source of truth for one
+   value. Equipment Responsibility Mapping still browses the hierarchy and keeps
+   HierarchyBrowser; this is the booking path only. */
+.booking-equipment-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.equipment-selector {
+  max-width: 480px;
+}
+
+.equipment-selector input[type='search'] {
+  width: 100%;
+}
+
+/* The chosen equipment, in place of the input: the field shows the answer rather
+   than the question once there is one. */
+.equipment-selected {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  min-height: 34px;
+}
+
+.equipment-selected-name {
+  font-weight: 650;
+}
+
+.equipment-selected-path {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.equipment-selected-clear {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: none;
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.equipment-selected-clear:hover {
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+/* Multi-section choice: a checkbox group rather than a multi-select, so every option and
+   every choice is visible at once and a section cannot be picked twice. */
+.section-choice {
+  border: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  min-width: 0;
+}
+
+.section-choice > legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
+
+.section-choice-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.section-choice-option {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-sunken);
+  cursor: pointer;
+  font-size: var(--text-sm);
+}
+
+.section-choice-option:hover {
+  border-color: var(--color-border-strong);
+}
+
+.section-choice-option:has(input:checked) {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.section-choice-option.is-mapped {
+  cursor: default;
+  opacity: 0.75;
+}
+
+.section-choice-note {
+  color: var(--color-text-muted);
+  font-size: var(--text-micro);
+}
+
+/* "This already exists" - every namesake, with the path and sections that tell them
+   apart. Nothing here is pre-selected: the user chooses, or explicitly creates a new one. */
+.equipment-existing {
+  border: 1px solid var(--color-warn-border);
+  background: var(--color-warn-bg);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.equipment-existing-title {
+  margin: 0 0 var(--space-2);
+  font-weight: 650;
+}
+
+.equipment-existing-list {
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.equipment-existing-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-solid);
+  cursor: pointer;
+}
+
+.equipment-existing-item:hover {
+  border-color: var(--color-border-strong);
+}
+
+.equipment-existing-item.is-chosen {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.equipment-existing-path {
+  font-weight: 600;
+}
+
+.equipment-existing-sections {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.modal-wide {
+  max-width: 640px;
+}
+
+/* The mapping page's permanent create action, above the browse/detail split. */
+.equipment-mapping-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-3);
+}
+
+/* ======================================== collapsible booking hierarchy ==== */
+/* Locomotive > equipment > bookings, everything closed until asked for. A closed group
+   renders nothing but its own header (the body is not in the DOM at all), which is what
+   keeps a pool of hundreds of bookings cheap to display. */
+.collapsible-group {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+
+.collapsible-group + .collapsible-group {
+  margin-top: var(--space-2);
+}
+
+.collapsible-group-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.collapsible-group-header:hover {
+  background: var(--color-surface-hover);
+}
+
+.collapsible-group-chevron {
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.collapsible-group-header[aria-expanded='true'] .collapsible-group-chevron {
+  transform: rotate(90deg);
+}
+
+.collapsible-group-heading {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.collapsible-group-title {
+  font-weight: 650;
+}
+
+.collapsible-group-loco > .collapsible-group-header .collapsible-group-title {
+  font-family: var(--font-mono, inherit);
+  font-size: var(--text-md);
+}
+
+.collapsible-group-subtitle {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collapsible-group-count {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.collapsible-group-counts {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-1);
+}
+
+.collapsible-group-body {
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+/* THREE DISTINCT LEVELS. A locomotive is a card (bordered surface, mono number); a source is a
+   BAND inside it - no card of its own, an uppercase eyebrow and a left rule, so it reads as a
+   divider rather than as another box; equipment is a flat sunken panel inside the band. The source
+   heading deliberately shares no treatment with either neighbour, which is what lets the eye tell
+   "Test Before" from "33335" and from "Air Dryer" at a glance. */
+.collapsible-group-source {
+  border: none;
+  border-radius: 0;
+  background: none;
+  overflow: visible;
+  border-left: 2px solid var(--color-border-strong);
+  margin-left: var(--space-1);
+  padding-left: var(--space-2);
+}
+
+.collapsible-group-source + .collapsible-group-source {
+  margin-top: var(--space-4);
+}
+
+.collapsible-group-source > .collapsible-group-header {
+  padding: var(--space-2) var(--space-2);
+}
+
+.collapsible-group-source > .collapsible-group-header:hover {
+  background: var(--color-surface-hover);
+  border-radius: var(--radius-xs);
+}
+
+.collapsible-group-source > .collapsible-group-header .collapsible-group-title {
+  font-size: var(--text-micro);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.collapsible-group-source > .collapsible-group-body {
+  padding: var(--space-2) 0 0;
+}
+
+/* The equipment level sits inside a source band - flatter, so the nesting reads. */
+.collapsible-group-equipment {
+  border-color: var(--color-border);
+  background: var(--color-surface-sunken);
+}
+
+/* Counts and the schedule/path subtitle are the first things to go when there is no room;
+   the title and the chevron never are. */
+@media (max-width: 720px) {
+  .collapsible-group-counts {
+    display: none;
+  }
+}
+
+.equipment-no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+/* Keyboard navigation highlight - the same surface as :hover, so arrowing down
+   the list and moving the pointer over it look identical. */
+.search-result-item-active {
+  background: var(--color-surface-hover);
+}
+
+/* Desktop split pane: browse/search on the left, the selected node's
+   details, resolved path and mapping controls on the right. Purely a
+   layout restructure of the page's existing state — the same components,
+   the same requests, the same mapping semantics. */
+.equipment-mapping-layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.equipment-mapping-browse,
+.equipment-mapping-detail {
+  min-width: 0;
+}
+
+.equipment-mapping-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Sticky only where there is vertical room to spare. A DEEP hierarchy adds
+   one cascading level per depth, so the pane can grow taller than the
+   viewport — and a sticky box taller than the viewport pins its top and
+   leaves its lowest levels unreachable. Capping its height and scrolling
+   inside the pane keeps the deepest level reachable and keeps the scroll
+   scoped to the hierarchy, never the whole page layout. */
+@media (min-width: 1101px) {
+  .equipment-mapping-browse {
+    position: sticky;
+    top: calc(60px + var(--space-4));
+    max-height: calc(100vh - 60px - var(--space-6));
+    overflow-y: auto;
+  }
+}
+
+.hierarchy-browser {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+/* Inside the mapping page's narrow left pane the cascading levels stack
+   instead of wrapping; elsewhere (Shed In booking rows) they stay inline. */
+.equipment-mapping-browse .hierarchy-browser {
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.equipment-mapping-browse .hierarchy-browser .field,
+.equipment-mapping-browse .equipment-search {
+  max-width: none;
+}
+
+/* A <select> sizes itself to its longest option, and equipment names deep
+   in a hierarchy are long — unconstrained, the level dropdowns pushed past
+   the fixed-width left pane and gave the page a horizontal scrollbar. They
+   are held to the pane's width instead; the native control ellipsises or
+   scrolls its own option text. */
+.equipment-mapping-browse select,
+.equipment-mapping-browse input {
+  width: 100%;
+  max-width: 100%;
+}
+
+.equipment-search {
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.search-results {
+  list-style: none;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  background: var(--color-surface-solid);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.search-result-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+}
+
+.search-result-item:hover {
+  background: var(--color-surface-sunken);
+}
+
+.search-results li:last-child .search-result-item {
+  border-bottom: none;
+}
+
+.search-result-name {
+  font-weight: 600;
+}
+
+.search-result-path {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.search-results-empty {
+  padding: var(--space-2) var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.selected-node-panel-empty {
+  color: var(--color-text-muted);
+}
+
+.selected-node-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-1);
+}
+
+.selected-node-path {
+  color: var(--color-text-muted);
+  margin: var(--space-1) 0;
+  font-size: var(--text-base);
+  overflow-wrap: anywhere;
+}
+
+.selected-node-id {
+  color: var(--color-text-faint);
+  font-size: var(--text-xs);
+  margin: 0 0 var(--space-3);
+}
+
+.mapping-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-4) var(--space-6);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.mapping-block {
+  min-width: 220px;
+}
+
+.mapping-empty {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+.mapping-note {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  max-width: 360px;
+}
+
+.section-badge-list {
+  list-style: none;
+  margin: 0 0 var(--space-2);
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.section-mapping-editor {
+  max-width: none;
+}
+
+.section-mapping-editor .section-checkbox-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--space-1) var(--space-4);
+  max-height: 260px;
+}
+
+.section-mapping-editor .section-filter {
+  max-width: 380px;
+}
+
+.section-filter {
+  width: 100%;
+  margin-bottom: var(--space-2);
+}
+
+.section-checkbox-list {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.section-checkbox-list label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+}
+
+.section-mapping-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.permission-denied {
+  color: var(--color-danger);
+}
+
+/* ========================================================= shed in form == */
+
+.locomotive-select {
+  max-width: 420px;
+}
+
+.locomotive-selected {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.shed-in-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.shed-in-form h2 {
+  margin-top: var(--space-4);
+  font-size: var(--text-md);
+  color: var(--color-text);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.log-book-booking-row {
+  border-left: 3px solid var(--color-primary);
+}
+
+.log-book-booking-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+}
+
+.log-book-booking-row textarea {
+  width: 100%;
+  max-width: 480px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.equipment-picker-selection {
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  margin-top: var(--space-1);
+  max-width: 480px;
+}
+
+.equipment-picker-path {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.routing-preview {
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.routing-preview-unmapped {
+  color: var(--color-danger);
+}
+
+.shed-in-form-actions {
+  margin-top: var(--space-4);
+}
+
+/* ==================================================== booking detail ===== */
+
+.section-dashboard-picker {
+  max-width: 340px;
+}
+
+/* Section picker and the status segmented control read as one toolbar
+   row rather than two controls stacked in separate whitespace. */
+.section-dashboard-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  flex-wrap: wrap;
+}
+
+.section-dashboard-filter-label {
+  font-size: var(--text-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 700;
+  color: var(--color-text-faint);
+}
+
+.section-dashboard-equipment-groups {
+  display: flex;
+  flex-direction: column;
+}
+
+.section-dashboard-count {
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.booking-detail-panel {
+  margin-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.booking-detail-panel h4 {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: var(--text-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: var(--color-text-muted);
+}
+
+.booking-detail-meta {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-1) var(--space-4);
+  margin: 0 0 var(--space-2);
+}
+
+.booking-detail-meta div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.booking-detail-meta dt {
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.booking-detail-meta dd {
+  margin: 0;
+}
+
+.booking-detail-path {
+  color: var(--color-text-muted);
+  margin: var(--space-1) 0;
+}
+
+.booking-detail-description {
+  margin: var(--space-1) 0;
+}
+
+.booking-detail-assignments-table th,
+.booking-detail-assignments-table td {
+  text-align: left;
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+}
+
+.booking-detail-add-section {
+  margin-top: var(--space-2);
+}
+
+.booking-detail-add-section-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  max-width: 360px;
+}
+
+.booking-detail-add-section-form textarea {
+  width: 100%;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.booking-detail-add-section-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.booking-detail-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.booking-detail-history-remarks {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+}
+
+/* ============================================ workflow page — secondary == */
+/* The three read-only checksheet/work-package panels, demoted below the
+   actionable workflow stages and Shed Out. Still fully rendered (nothing
+   here is collapsed or gated behind interaction) — only their position and
+   visual weight change. */
+.workflow-secondary {
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--color-border);
+}
+
+.workflow-secondary-title {
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-faint);
+  font-weight: 700;
+  margin: 0 0 var(--space-1);
+}
+
+/* Two columns at desktop/laptop widths where these independent read-only
+   panels sit comfortably side by side; auto-fit collapses to one column
+   once a column would drop below ~420px, so 1024px and phone widths alike
+   stack cleanly with no horizontal scroll. */
+.workflow-secondary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.workflow-secondary-grid > .panel {
+  margin-bottom: 0;
+}
+
+/* =========================================================== responsive == */
+/* Desktop/laptop first: 1366–1920px is the design target and uses the full
+   content column. Below ~1100px the mapping split pane folds to one
+   column; below ~1000px the sidebar collapses behind a Menu toggle in the
+   top bar; below ~700px multi-column grids stack. Android serves
+   technicians, so this is a graceful fallback, not a mobile rebuild. */
+
+/* ~1024px laptop: two metric columns rather than four squeezed ones, and
+   one assignment card per row rather than two cramped ones. */
+@media (max-width: 1280px) {
+  .metric-row {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  }
+
+  .section-dashboard-equipment-group-cards {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .equipment-mapping-layout {
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+}
+
+@media (max-width: 1000px) {
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 20;
+    transform: translateX(-100%);
+    transition: transform 0.15s ease-out;
+  }
+
+  .app-shell-nav-open .sidebar {
+    transform: translateX(0);
+    box-shadow: 0 0 24px rgba(0, 0, 0, 0.35);
+  }
+
+  /* THE BUG THIS FIXES: the open drawer is position:fixed at inset 0 auto 0 0 with
+     z-index 20, so it covers the top-left of the viewport - which is exactly where the
+     header's Menu button (z-index 5) sits. The button that opens the drawer was therefore
+     underneath it once open, and nothing else could close it. The drawer now carries its
+     own Close button, and the scrim below catches a tap anywhere outside it. */
+  .sidebar-close {
+    display: inline-grid;
+  }
+
+  .sidebar-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 15;
+    background: rgba(4, 10, 22, 0.55);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* inline-flex, not inline-block: the button carries .btn, whose label
+     centring/gap depend on flex layout. */
+  .app-header .nav-toggle {
+    display: inline-flex;
+  }
+
+  .app-content {
+    padding: var(--space-4);
+  }
+
+  .user-summary {
+    padding-left: var(--space-3);
+  }
+
+  .app-header-eyebrow {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar {
+    transition: none;
+  }
+
+  /* Turn off every non-essential animation/transition — hover lift on cards
+     and buttons, colour transitions, the modal fade. (The backdrop is static
+     and nothing pulses anymore.) Skeleton shimmer is removed in the loading
+     block above; spinners only slow down, because they are the one signal
+     that work is in progress. Layout, colour and content are unaffected. */
+  .modal-backdrop {
+    animation: none;
+  }
+
+  .metric-card,
+  .assignment-card,
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-attention,
+  .btn-danger-outline,
+  .loco-visit-card,
+  .nav-link,
+  select,
+  input,
+  textarea {
+    transition: none;
+  }
+
+  .metric-card:hover,
+  .assignment-card:hover,
+  .btn-primary:hover:not(:disabled),
+  .btn-secondary:hover:not(:disabled),
+  .btn-attention:hover:not(:disabled),
+  .btn-danger-outline:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .metric-card:hover,
+  .loco-visit-card,
+  .phase-chip {
+    transition: none;
+  }
+}
+
+@media (max-width: 700px) {
+  .metric-row,
+  .stage-list,
+  .workflow-secondary-grid,
+  .section-dashboard-equipment-group-cards,
+  .mapping-summary,
+  .section-mapping-editor .section-checkbox-list {
+    grid-template-columns: 1fr;
+  }
+
+  .loco-visit-card {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .loco-visit-card-actions {
+    justify-content: flex-start;
+  }
+
+  .page-header {
+    flex-direction: column;
+  }
+
+  .booking-detail-meta {
+    grid-template-columns: 1fr;
+  }
+
+  .app-header-context {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Shed lifecycle: phase chips, timing facts, and the shared action dialog.
+   Uses only existing design tokens - no new palette is introduced.
+   --------------------------------------------------------------------------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(4, 10, 22, 0.7);
+  backdrop-filter: blur(4px);
+  animation: feedback-in var(--duration-base) var(--ease-out);
+}
+
+.modal {
+  width: min(480px, 100%);
+  padding: var(--space-5) var(--space-5) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(170deg, var(--color-surface-raised), var(--color-surface-solid) 60%);
+  box-shadow: 0 24px 60px rgba(2, 8, 20, 0.55);
+}
+
+.modal-title {
+  margin: 0 0 6px;
+  font-size: var(--text-lg);
+}
+
+.modal-description {
+  margin: 0 0 18px;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* Operational phase chip. Each phase gets its own tone so the shed floor can be
+   scanned at a glance rather than read. */
+.phase-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 3px 11px 3px 9px;
+  border: 1px solid;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  width: fit-content;
+}
+
+/* A small leading dot in the phase colour (the label text carries the
+   meaning; the dot only aids scanning). */
+.phase-chip::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.9;
+}
+
+.phase-chip-spare {
+  color: var(--color-neutral);
+  border-color: var(--color-neutral-border);
+  background: var(--color-neutral-bg);
+}
+
+.phase-chip-in-progress {
+  color: var(--color-active);
+  border-color: var(--color-active-border);
+  background: var(--color-active-bg);
+}
+
+.phase-chip-inspection-complete {
+  color: var(--color-info);
+  border-color: var(--color-info-border);
+  background: var(--color-info-bg);
+}
+
+.phase-chip-ready {
+  color: var(--color-success);
+  border-color: var(--color-success-border);
+  background: var(--color-success-bg);
+}
+
+.phase-chip-shed-out {
+  color: var(--color-text-faint);
+  border-color: var(--color-border);
+  background: transparent;
+}
+
+/* A duration that is still accumulating reads differently from a final one. */
+.timing-running {
+  color: var(--color-active);
+}
+
+/* ================================================== shed visit history == */
+
+.tag-warn {
+  background: var(--color-warn-bg);
+  color: var(--color-warn);
+  border-color: var(--color-warn-border);
+}
+
+.history-filter-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.history-results {
+  padding: var(--space-3);
+}
+
+.history-table td {
+  vertical-align: top;
+}
+
+.history-loco {
+  font-family: 'JetBrains Mono Variable', 'JetBrains Mono', 'Manrope Variable', monospace;
+  font-size: var(--text-loco);
+  font-weight: 700;
+}
+
+.history-muted,
+.history-not-recorded {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.history-not-recorded {
+  font-style: italic;
+}
+
+.history-note {
+  color: var(--color-warn);
+  font-size: var(--text-sm);
+}
+
+.history-warning {
+  background: var(--color-warn-bg);
+  border: 1px solid var(--color-warn-border);
+  color: var(--color-warn);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  margin: 0 0 var(--space-4);
+}
+
+.history-reset-notice {
+  background: var(--color-warn-bg);
+  border: 1px solid var(--color-warn-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin: 0 0 var(--space-4);
+}
+
+.history-row-reset td:first-child {
+  box-shadow: inset 3px 0 0 var(--color-warn);
+}
+
+.history-detail-row > td {
+  background: var(--color-surface-sunken);
+  padding: var(--space-4);
+}
+
+.history-detail {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.history-block h3 {
+  font-size: var(--text-md);
+  margin: 0 0 var(--space-2);
+}
+
+.history-subheading {
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin: var(--space-3) 0 var(--space-2);
+}
+
+.history-timings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.history-milestones,
+.history-spans,
+.history-grid {
+  margin: 0;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.history-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-3);
+}
+
+.history-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  border-bottom: 1px dashed var(--color-border);
+  padding: var(--space-1) 0;
+}
+
+.history-grid .history-kv {
+  flex-direction: column;
+  border-bottom: none;
+}
+
+.history-kv dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.history-kv dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.history-grid .history-kv dd {
+  text-align: left;
+}
+
+.history-group,
+.history-booking {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  margin-bottom: var(--space-2);
+}
+
+.history-booking {
+  background: var(--color-surface-raised);
+}
+
+.history-group > summary,
+.history-booking > summary {
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+}
+
+.history-group-title,
+.history-booking-title {
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.history-group-count {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.history-group-body,
+.history-booking-body {
+  padding: 0 var(--space-3) var(--space-3);
+}
+
+.history-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.history-events li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  border-left: 2px solid var(--color-border-strong);
+  padding-left: var(--space-3);
+}
+
+.history-event-time {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.history-event-remarks {
+  color: var(--color-text-muted);
+}
+
+.history-raw {
+  flex-basis: 100%;
+}
+
+.history-raw pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--text-xs);
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-xs);
+  padding: var(--space-2);
+}
+
+.history-reopens {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+
+.history-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.history-signed-doc {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.history-inline-error {
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+
+.history-pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+}
+
+@media (max-width: 700px) {
+  .history-kv {
+    flex-direction: column;
+  }
+
+  .history-kv dd {
+    text-align: left;
+  }
+}
+
+/* =========================================================================
+   Theme toggle
+   -------------------------------------------------------------------------
+   Sits in the header's top-right, beside the user block. It is a normal
+   secondary button - same height, radius and focus ring as every other
+   control - so it reads as part of the header rather than an ornament. The
+   label collapses on narrow viewports where header space is scarce; the
+   aria-label always carries the full sentence.
+   ========================================================================= */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.theme-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-cyan);
+}
+
+@media (max-width: 720px) {
+  .theme-toggle-text {
+    display: none;
+  }
+}
+
+/* ===========================================================================================
+   ADMIN DESTRUCTIVE DELETION
+   ===========================================================================================
+   THE SURFACE IS THE THEME'S, NOT THE DANGER COLOUR'S. An earlier version of this section set an
+   opaque red-brown background on .modal-danger and flipped it under
+   @media (prefers-color-scheme: dark). Both were wrong:
+
+     * This application themes itself with :root[data-theme='light'|'dark'], and dark is the default
+       (see the :root, :root[data-theme='dark'] block). prefers-color-scheme reads the OPERATING
+       SYSTEM instead, so the two can disagree - a user running the Dashboard in light theme on a
+       dark-mode OS got the dark brown surface together with light-theme dark body text, which is
+       exactly the unreadable combination reported.
+     * The tokens it named (--danger-surface, --danger-strong, --text-muted) do not exist in this
+       stylesheet, so every declaration silently fell back to a hardcoded hex and stopped tracking
+       the theme at all.
+
+   So .modal-danger now sets NO background. It inherits .modal's theme-aware surface, which is
+   already a gradient over --color-surface-raised / --color-surface-solid and already flips. Red is
+   an ACCENT only - title, rules, warning border, submit button - carried by --color-danger, which
+   is defined per theme (#f47c90 dark, #c62b45 light). Body copy stays --color-text.
+
+   Both dialogs share every class here. DeleteBookingDialog and DeleteShedVisitDialog render the
+   same .modal-backdrop > .modal.modal-danger shell, the same .delete-visit-* blocks, the same
+   .field inputs and the same .btn / .btn-danger actions, so this one section is the lowest level at
+   which both can be fixed together and there is no per-dialog CSS anywhere.
+   =========================================================================================== */
+
+/* Red, but only here and on the accents below. */
+.danger-heading {
+  margin-top: 0;
+  color: var(--color-danger);
+}
+
+/* The ONLY surface change: a danger rule along the top edge and a danger-tinted border, over the
+   ordinary modal background. --color-danger-bg is a low-alpha wash of the same hue in both themes,
+   so it tints without becoming opaque. */
+.modal-danger {
+  border-color: var(--color-danger-border);
+  border-top: 3px solid var(--color-danger);
+}
+
+.delete-visit-dialog {
+  width: min(44rem, 100%);
+}
+
+.delete-visit-summary {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem var(--space-4);
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.delete-visit-summary dt {
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+/* The values - locomotive, visit, schedule, arrival, status - are ordinary body copy and must be
+   read at a glance, so they take the normal high-contrast text colour, never the danger hue. */
+.delete-visit-summary dd {
+  margin: 0;
+  color: var(--color-text);
+}
+
+/* "This will permanently delete N record(s)" is a danger label; the list beneath it is data. */
+.delete-visit-counts h3 {
+  margin: 0 0 0.35rem;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.delete-visit-counts ul {
+  margin: 0 0 var(--space-4);
+  padding-left: 1.1rem;
+  color: var(--color-text);
+  columns: 2;
+  font-size: var(--text-sm);
+}
+
+.delete-visit-counts p {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text);
+}
+
+/* The warnings name what is actually being lost - signed checksheets, approved work, files on disk.
+   They are the one part an administrator must not skim, so they get a red left accent and a tinted
+   wash while the text itself stays fully readable theme text. */
+.delete-visit-warnings {
+  margin: 0 0 var(--space-4);
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border: 1px solid var(--color-danger-border);
+  border-left: 3px solid var(--color-danger);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-bg);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  list-style-position: inside;
+}
+
+.delete-visit-warnings li + li {
+  margin-top: 0.35rem;
+}
+
+/* Emphasised by weight and by the danger hue, because it is the single most important sentence in
+   the dialog - and it is one line, so it does not become a wall of red. */
+.delete-visit-irreversible {
+  color: var(--color-danger);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
+/* The typed phrase. The instruction is danger-coloured; the phrase itself is set as code against
+   the sunken surface so it can be copied accurately. */
+.modal-danger .field-label code {
+  padding: 0 0.3rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+/* Inputs are left entirely to the existing themed .field styling - including focus rings - so the
+   three fields here look and behave like every other input in the application. Nothing in this
+   section sets their background, border or focus state. */
+
+/* Separated from the workflow controls by a rule and a wide gap, so a destructive action is never
+   adjacent to a button an operator presses every day. */
+.workflow-danger-zone {
+  margin-top: var(--space-6);
+  padding-top: var(--space-4);
+  border-top: 2px solid var(--color-danger-border);
+}
+
+.workflow-danger-zone p {
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}
+
+/* Quieter than .btn-danger: inside a dense table a filled danger button would dominate rows whose
+   normal use has nothing to do with deletion. It opens the same confirmation dialog. */
+.btn-danger-subtle {
+  margin-top: 0.3rem;
+  border: 1px solid var(--color-danger-border);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.btn-danger-subtle:hover:not(:disabled) {
+  border-color: var(--color-danger);
+}
+
+.deletion-history-table .deletion-reason {
+  max-width: 18rem;
+  font-size: var(--text-sm);
+}
+
+/* A failed deletion is tinted, not repainted - the row must still be readable. */
+.deletion-history-table .row-failed {
+  background: var(--color-danger-bg);
+}
+
+.deletion-detail {
+  padding: var(--space-3) 0;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}
+
+.deletion-items-table .snapshot-json {
+  display: block;
+  max-width: 48rem;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+}
+
+/* ==================================== planner section routing (PPIO) ==== */
+/* Built from the existing tokens and the existing dialog/meta-list idioms - the same shape as
+   .booking-detail-meta above and the same danger tokens the deletion dialogs use - so this reads
+   as part of the application rather than as a bolt-on, in both themes. */
+.manage-sections-meta {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-3);
+}
+
+.manage-sections-meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.manage-sections-meta dt {
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.manage-sections-meta dd {
+  margin: 0;
+  text-align: right;
+}
+
+.manage-sections-error {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-danger-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.section-checklist {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.section-checklist legend {
+  padding: 0 var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+.section-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  cursor: pointer;
+}
+
+.section-checklist-name {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* States what Save would do before it is done - the same before/after pair the audit event
+   records. Quiet by default; it is a confirmation, not a warning. */
+.manage-sections-summary {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* The one action a planner has on a booking row. A link-weight button, so it does not read as a
+   lifecycle control sitting beside the status. */
+.booking-row-link-button {
+  display: inline-block;
+  margin-top: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.booking-row-link-button:hover {
+  color: var(--color-link-hover);
+  text-decoration: underline;
+}
+
+/* ============================== planning booking creation (PPIO) ==== */
+/* Reuses the dialog, field and checklist idioms already defined above; only the two elements
+   with no existing equivalent are styled here. */
+.planning-equipment-chosen {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+}
+
+.planning-equipment-chosen button {
+  border: 0;
+  background: none;
+  color: var(--color-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.planning-equipment-chosen button:hover {
+  color: var(--color-link-hover);
+  text-decoration: underline;
+}
+
+
