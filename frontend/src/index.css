@@ -1180,6 +1180,16 @@ a.btn-primary:visited {
   border-color: var(--color-success-border);
 }
 
+/* "2 sections" next to the per-section chips in the Booking Pool. Plain muted text, not another
+   tag: it is a count, not a status, and giving it a pill would compete with the chips it
+   describes. Uses the existing muted text token - no new colour is introduced. */
+.booking-row-section-count {
+  margin-left: 0.35rem;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
 /* Legacy badge classes still used by the equipment-mapping screens. */
 .badge {
   display: inline-block;

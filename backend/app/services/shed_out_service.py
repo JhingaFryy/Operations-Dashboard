@@ -35,6 +35,10 @@ from fastapi import status
 from sqlalchemy.orm import Session
 
 from app.domain.schedule import is_valid_schedule_pair
+from app.domain.booking_resolution import (
+    UNRESOLVED_ASSIGNMENT_STATUSES,
+    unresolved_display_status,
+)
 from app.db.models import Booking, BookingSectionAssignment, ShedVisit, ShedVisitEvent, ShedVisitStage, User
 from app.schemas.shed_visits import (
     BookingBlockerOut,
@@ -52,7 +56,10 @@ from app.services.checksheet_requirement_completion_service import (
 )
 from app.services.workflow_common import error, get_visit_or_404, test_before_legacy_waived
 
-NOT_YET_ATTENDED_ASSIGNMENT_STATUSES = ("OPEN", "IN_PROGRESS", "REOPENED")
+# Re-exported, not redefined. The gate below asks the shared domain helper whether any row
+# is unresolved; this name is kept because the module docstring and tests refer to it, but
+# it must stay the SAME three values as every other unresolved check in the codebase.
+NOT_YET_ATTENDED_ASSIGNMENT_STATUSES = UNRESOLVED_ASSIGNMENT_STATUSES
 
 REQUIRED_ACTIVE_STAGES = ("TEST_BEFORE", "SCHEDULE_INSPECTION", "TEST_AFTER")
 
@@ -134,14 +141,29 @@ def _evaluate(
             booking_blockers.append(
                 BookingBlockerOut(booking_id=b.id, booking_source=b.booking_source, status="NO_ASSIGNMENTS")
             )
-        elif any(a.status in NOT_YET_ATTENDED_ASSIGNMENT_STATUSES for a in b_assignments):
-            # b.status is kept in sync with these same assignments by
-            # section_dashboard_service.recompute_booking_status() on every mutation - shown here
-            # as the human-readable summary, but the block decision above is always derived
-            # directly from the assignment rows, never from b.status alone.
-            booking_blockers.append(
-                BookingBlockerOut(booking_id=b.id, booking_source=b.booking_source, status=b.status)
-            )
+        else:
+            # DISPLAYED STATUS IS DERIVED FROM THE SAME ROWS AS THE DECISION.
+            #
+            # This used to show b.status, the stored parent aggregate. That is normally in sync,
+            # but it is not guaranteed to be at the moment this runs - a booking that gained a
+            # section through planning kept its old ATTENDED parent status, so this list reported
+            # "booking 8003 (ATTENDED) is blocking Shed Out", which is self-contradictory and
+            # unactionable for the person trying to release the loco.
+            #
+            # unresolved_display_status() returns None exactly when every assignment is ATTENDED,
+            # which is precisely the not-a-blocker case - so the None check IS the gate here,
+            # replacing the previous `any(... in NOT_YET_ATTENDED_ASSIGNMENT_STATUSES)` test with
+            # its exact complement. The gate is not weakened: both ask "is any row unresolved",
+            # now from one shared definition instead of two parallel ones.
+            display_status = unresolved_display_status(a.status for a in b_assignments)
+            if display_status is not None:
+                booking_blockers.append(
+                    BookingBlockerOut(
+                        booking_id=b.id,
+                        booking_source=b.booking_source,
+                        status=display_status,
+                    )
+                )
 
     completion = evaluate_requirement_completion(db, bldcms_client, visit)
     checksheet_blockers = [

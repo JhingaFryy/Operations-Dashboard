@@ -38,6 +38,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.authz import is_planning_user
+from app.domain.booking_resolution import aggregate_booking_status
 from app.clients.loco_master import (
     LocoMasterAuthError,
     LocoMasterClient,
@@ -159,14 +160,10 @@ def recompute_booking_status(db: Session, booking_id: int) -> None:
     if booking is None:
         return
 
-    if "REOPENED" in statuses:
-        booking.status = "REOPENED"
-    elif statuses and all(s == "ATTENDED" for s in statuses):
-        booking.status = "ATTENDED"
-    elif "IN_PROGRESS" in statuses:
-        booking.status = "IN_PROGRESS"
-    else:
-        booking.status = "OPEN"
+    # The formula itself now lives in app/domain/booking_resolution.py, because the Shed Out
+    # blocker display and the shed-visit pending count need the SAME answer and three hand-copied
+    # versions of it would drift. This remains the only place the result is WRITTEN.
+    booking.status = aggregate_booking_status(statuses)
 
 
 def _enrich_equipment_names(client: LocoMasterClient, node_ids: set[int]) -> dict[int, str]:

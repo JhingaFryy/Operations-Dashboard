@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -13,6 +13,7 @@ from app.clients.loco_master import (
 )
 from app.db.models import (
     Booking,
+    BookingSectionAssignment,
     ShedVisit,
     ShedVisitEvent,
     ShedVisitStage,
@@ -21,6 +22,7 @@ from app.db.models import (
 from dataclasses import asdict
 
 from app.services.workflow_common import test_before_legacy_waived
+from app.domain.booking_resolution import UNRESOLVED_ASSIGNMENT_STATUSES
 
 from app.services.shed_visit_phase import (
     PHASE_ACTIONS,
@@ -39,7 +41,6 @@ from app.services import equipment_family_service
 from app.services.booking_creation_service import create_booking, resolve_and_validate_bookings
 
 OPEN_VISIT_STATUSES = ("IN_SHED", "READY")
-PENDING_BOOKING_STATUSES = ("OPEN", "IN_PROGRESS", "REOPENED")
 
 # Order matters: this is stage_order 1..3. SPECIAL_CHECKING is
 # deliberately not part of the active Minor workflow (business decision,
@@ -271,12 +272,37 @@ def list_current_visits(db: Session) -> list[CurrentShedVisitOut]:
         booking_total = (
             db.query(func.count(Booking.id)).filter(Booking.shed_visit_id == visit.id).scalar() or 0
         )
-        # Common Booking Pool reform: pending is now derived from booking.status directly, not
-        # booking_section_assignments (which no longer drives anything operational).
+        # DERIVED FROM ASSIGNMENT ROWS, NOT FROM Booking.status.
+        #
+        # The comment that used to sit here said pending was derived from booking.status because
+        # booking_section_assignments "no longer drives anything operational". That described a
+        # superseded architecture and is now simply false: the Shed Out gate and every per-stage
+        # gate re-derive from the assignment rows, and booking.status is only a cached aggregate
+        # of them. Counting the cache undercounted real work - a booking that gained a section
+        # through planning still read ATTENDED and silently dropped out of this count.
+        #
+        # ONE query, a fixed cost per visit regardless of booking count, and it answers both
+        # pending cases at once. The LEFT JOIN yields a NULL assignment row for a booking that
+        # has none, so:
+        #   assignment id IS NULL        -> zero assignments (a routing gap; Shed Out blocks on it
+        #                                   too, so it must count as pending here)
+        #   status in UNRESOLVED_*       -> at least one section still has outstanding work
+        # COUNT(DISTINCT) because a multi-section booking matches once per unresolved row and must
+        # still be counted as a single pending booking - that is exactly the double-count this
+        # join would otherwise introduce.
         pending = (
-            db.query(func.count(Booking.id))
+            db.query(func.count(func.distinct(Booking.id)))
+            .outerjoin(
+                BookingSectionAssignment,
+                BookingSectionAssignment.booking_id == Booking.id,
+            )
             .filter(Booking.shed_visit_id == visit.id)
-            .filter(Booking.status.in_(PENDING_BOOKING_STATUSES))
+            .filter(
+                or_(
+                    BookingSectionAssignment.id.is_(None),
+                    BookingSectionAssignment.status.in_(UNRESOLVED_ASSIGNMENT_STATUSES),
+                )
+            )
             .scalar()
             or 0
         )

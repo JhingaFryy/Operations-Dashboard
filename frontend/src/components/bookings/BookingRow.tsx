@@ -1,4 +1,5 @@
 import { bookingSourceLabel, formatDateTimeShort, formatSchedule, stageLabel } from '../../lib/format'
+import { multiSectionLabel, sectionChipMeta, sectionChipTitle } from '../../lib/assignmentStatus'
 import { BookingStatusBadge, Tag } from '../ui/StatusBadge'
 import type { BookingPoolItem } from '../../types'
 
@@ -96,14 +97,39 @@ export function BookingRow({
             browser can hold this bundle while still talking to a backend that predates the
             field. Degrading to "Not routed" is the same choice _enrich_equipment makes server
             side - a display gap, never a crashed page. */}
+        {/* EACH CHIP CARRIES ITS OWN SECTION'S STATUS, not the booking's aggregate.
+            A multi-section booking is the whole point of planning: M4-HR may be ATTENDED while
+            MACHINE SHOP is still OPEN, and a planner needs to see which of the two is holding the
+            work. Rendering only the section code - as this did - made every chip look identical
+            and hid exactly the information the pool exists to show.
+
+            Never colour alone: the glyph is decorative (aria-hidden) and the status word travels
+            with it as visually-hidden text, so the chip reads correctly in greyscale and to a
+            screen reader. `title` repeats it for a sighted mouse user, mirroring how StatusBadge
+            already handles every other status in this app. */}
         {(booking.routed_sections ?? []).length > 0 ? (
-          (booking.routed_sections ?? []).map((section) => (
-            <Tag key={section.section_id} tone="neutral">
-              {section.section_code}
-            </Tag>
-          ))
+          (booking.routed_sections ?? []).map((section) => {
+            const meta = sectionChipMeta(section.status)
+            return (
+              <Tag key={section.section_id} tone={meta.tone}>
+                <span title={sectionChipTitle(section.section_code, section.status)}>
+                  <span aria-hidden="true">{meta.glyph}</span> {section.section_code}
+                  {/* ONE text node, not several - a label split across elements is not matchable
+                      by getByText, which has already caused flaky assertions in this file. */}
+                  <span className="visually-hidden">{` \u2014 ${meta.label}`}</span>
+                </span>
+              </Tag>
+            )
+          })
         ) : (
           <span className="booking-row-muted">Not routed</span>
+        )}
+        {/* Only when genuinely multi-section; multiSectionLabel returns null below 2 so the
+            common single-section booking gains no redundant "1 sections" chip. */}
+        {multiSectionLabel((booking.routed_sections ?? []).length) && (
+          <span className="booking-row-section-count">
+            {multiSectionLabel((booking.routed_sections ?? []).length)}
+          </span>
         )}
         {/* Existing assignments stay visible either way; only the ACTION is conditional. */}
         {onAddSections && (

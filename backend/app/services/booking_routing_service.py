@@ -57,6 +57,7 @@ from app.db.models import (
     User,
 )
 from app.core.authz import is_assignable_work_section, is_planning_section
+from app.services.section_dashboard_service import recompute_booking_status
 
 # Reused rather than invented. booking_events.event_type is CHECK-constrained to
 # ('CREATED','AUTO_ROUTED','FORWARDED','STARTED','ATTENDED','REOPENED'), so a new "ROUTED" type
@@ -236,6 +237,22 @@ def add_sections(
         unchanged_section_ids=previous_ids,
     )
     _record_events(db, booking_id, outcome, sections_by_id, current_user, reason, now)
+
+    # The parent Booking.status is a DERIVED aggregate over this booking's assignment rows, and
+    # adding a row changes that aggregate - so this write has to re-derive it exactly like every
+    # other assignment-row writer does (start/attend/reopen in section_dashboard_service all call
+    # this immediately after their own change).
+    #
+    # Concretely: a booking whose only section was ATTENDED reads ATTENDED. Adding a section gives
+    # it a fresh OPEN row, so the booking is no longer resolved and must stop reporting that it is.
+    # Before this call it kept saying ATTENDED, which made the global pool's status filter skip it
+    # and made Shed Out block a booking it was simultaneously describing as attended.
+    #
+    # The canonical formula is NOT duplicated here. recompute_booking_status is the one place it
+    # lives, and it is called before the commit so the new row and the parent status land in the
+    # same transaction - a reader can never observe one without the other.
+    recompute_booking_status(db, booking_id)
+
     db.commit()
     return outcome
 
